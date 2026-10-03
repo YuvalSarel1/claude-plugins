@@ -91,11 +91,11 @@ export function detail(job: any) {
 export function age(row: Pick<Row, 'start' | 'end'>, now: number) {
   const ms = Math.max(0, (row.end ?? now) - row.start)
   if (ms < 60_000) return `${Math.floor(ms / 1000)}s`
-  let d = Math.floor(ms / 86_400_000), h = Math.floor((ms % 86_400_000) / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000)
+  let d = Math.floor(ms / 86_400_000), hr = Math.floor((ms % 86_400_000) / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000)
   if (Math.round((ms % 60_000) / 1000) === 60) m++
-  if (m === 60) m = 0, h++
-  if (h === 24) h = 0, d++
-  return d ? `${d}d` : h ? `${h}h` : `${m}m`
+  if (m === 60) m = 0, hr++
+  if (hr === 24) hr = 0, d++
+  return d ? `${d}d` : hr ? `${hr}h` : `${m}m`
 }
 
 export type Usage = { cpu: number; rss: number }
