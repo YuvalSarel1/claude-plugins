@@ -71,6 +71,10 @@ It reads these files, all written by Claude Code or your own statusLine command:
 
 It hooks three Claude Code events: `session.start` to register `/fleet` and open the pane, `command.run` for `/fleet` only, and `ui.render` for its own pane only, which it draws. It does not see or change any other command, drawing, prompt or tool call.
 
+## Privacy
+
+fleet collects nothing and sends nothing. The session names, folders and prompts it shows stay on your machine, read from Claude Code's own files each time the pane refreshes and kept only in memory. The one thing it saves is your `/fleet` on or off choice, in Claude Code's plugin storage. [What it runs, reads and sends](#what-it-runs-reads-and-sends) lists every program and file involved.
+
 ## Limits
 
 | Limit | Why |
