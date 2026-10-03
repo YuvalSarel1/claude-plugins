@@ -58,7 +58,7 @@ It starts two local programs, only while the pane is on screen:
 | Program | Exact command | Why |
 |---|---|---|
 | Claude Code | `claude agents --json --all` | The session list and each session's state. It runs when a session or job file changed, and at most every 30 seconds otherwise. |
-| `ps` | `ps -o pid=,%cpu=,rss= -p <pids>`, where `<pids>` are the process ids `claude agents` reported | CPU and Memory columns. It runs only when one of those columns is on. |
+| `ps` | `ps -A -o pid=,%cpu=,rss=` | CPU and Memory columns, keeping only the process ids `claude agents` reported. It runs only when one of those columns is on. |
 
 It reads these files, all written by Claude Code or your own statusLine command:
 
@@ -68,6 +68,8 @@ It reads these files, all written by Claude Code or your own statusLine command:
 | `~/.claude/statusline/<session>.json` | Context and Cost, when those columns are on |
 
 `CLAUDE_CONFIG_DIR` replaces `~/.claude` when it is set. What it reads is drawn in the pane and nowhere else.
+
+It hooks three Claude Code events: `session.start` to register `/fleet` and open the pane, `command.run` for `/fleet` only, and `ui.render` for its own pane only, which it draws. It does not see or change any other command, drawing, prompt or tool call.
 
 ## Limits
 

@@ -1,11 +1,12 @@
-import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import type { Row } from '../types'
+export type Row = {
+  id: string; name: string; cwd: string; state: string; detail: string; since: number
+  model: string; effort: string; tokens: number | null; tasks: number | null; kind: string; prompt: string
+  cpu: number | null; rss: number | null; cost: number | null; contextTokens: number | null; contextWindow: number | null
+}
 
 const PANE = 'fleet'
-const rows = atom({ plugin: 'fleet', key: 'rows' } as const, [])
-const minute = atom({ plugin: 'fleet', key: 'minute' } as const, 0)
 
 // Claude Code's spinner: these frames there and back, one per 120 ms (Ghostty's set ends on ✻ twice).
 const FRAMES = ['·', '✢', '✳', '✶', '✻', '✽']
@@ -151,6 +152,7 @@ export const register: Register = (on, options) => {
   let poll = async (_force?: boolean) => {}
   let spinner = spin(FRAMES)
   let frame = 0
+  let rows: Row[] = []
   // The spinners the last drawing mounted; the timer repaints only these cells.
   let spinners: string[] = []
 
@@ -195,18 +197,22 @@ export const register: Register = (on, options) => {
       const usage: Record<number, Usage> = {}
       const pids = agents.map(a => a.pid).filter(Number.isInteger)
       if (wantsUsage && pids.length) {
-        const ps = await $.process.run(['ps', '-o', 'pid=,%cpu=,rss=', '-p', pids.join(',')]).catch(() => null)
+        // A fixed command line, filtered here to the sessions' pids.
+        const ps = await $.process.run(['ps', '-A', '-o', 'pid=,%cpu=,rss=']).catch(() => null)
+        const wanted = new Set(pids)
         for (const line of (ps?.stdout ?? '').split('\n')) {
           const [pid, cpu, rss] = line.trim().split(/\s+/).map(Number)
-          if (pid && cpu !== undefined && rss !== undefined) usage[pid] = { cpu, rss: rss * 1024 }
+          if (pid && wanted.has(pid) && cpu !== undefined && rss !== undefined) usage[pid] = { cpu, rss: rss * 1024 }
         }
       }
       const fresh = toRows(agents, jobs, reports, usage)
-      await update($, rows, prev => (JSON.stringify(prev) === JSON.stringify(fresh) ? prev : fresh))
+      if (JSON.stringify(rows) === JSON.stringify(fresh)) return
+      rows = fresh
+      $.ui.invalidate('ui.render')
     }
     $.clock.every(3000, () => void poll())
     // Ages move once a minute; nothing else redraws without a change.
-    $.clock.every(60_000, () => void update($, minute, n => n + 1))
+    $.clock.every(60_000, () => $.ui.invalidate('ui.render'))
     spinner = spin((await $.env.get('TERM')) === 'xterm-ghostty' ? GHOSTTY : FRAMES)
     // The spinner repaints its own cells, never the pane. A refused blit means the pane
     // is gone or hidden, and the cells wait for the next drawing to mount them again.
@@ -243,8 +249,8 @@ export const register: Register = (on, options) => {
     const { Box, Text } = $.ui.resolve(e)
     // Raster is the terminal's; elsewhere the spinner is a still glyph.
     const Raster = e.surface === 'terminal' ? $.ui.resolve(e as typeof e & { surface: 'terminal' }).Raster : undefined
-    const [list, here, home, now, , version] = await Promise.all([
-      read($, rows), $.session.cwd(), $.env.get('HOME'), $.clock.now(), read($, minute), $.session.version(),
+    const [list, here, home, now, version] = await Promise.all([
+      rows, $.session.cwd(), $.env.get('HOME'), $.clock.now(), $.session.version(),
     ])
     spinners = list.filter(r => r.state === 'working').map(r => `spin-${r.id}`)
     const tilde = home && here.startsWith(home) ? `~${here.slice(home.length)}` : here

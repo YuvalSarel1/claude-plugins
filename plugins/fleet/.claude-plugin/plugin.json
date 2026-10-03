@@ -1,6 +1,6 @@
 {
   "name": "fleet",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Your claude agents list in a side pane, with optional cones columns",
   "author": {
     "name": "Yuval Sarel",
@@ -8,7 +8,6 @@
   },
   "repository": "https://github.com/YuvalSarel1/claude-plugins",
   "license": "MIT OR Apache-2.0",
-  "types": "./types/index.d.ts",
   "userConfig": {
     "spinner": {
       "type": "boolean",
