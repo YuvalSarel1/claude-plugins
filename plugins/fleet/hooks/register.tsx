@@ -1,7 +1,7 @@
 import type { Register } from 'claude-code'
 
 export type Row = {
-  id: string; name: string; cwd: string; state: string; detail: string; since: number
+  id: string; name: string; cwd: string; group: string; state: string; detail: string; since: number
   model: string; effort: string; tokens: number | null; tasks: number | null; kind: string; prompt: string
   cpu: number | null; rss: number | null; cost: number | null; contextTokens: number | null; contextWindow: number | null
 }
@@ -63,6 +63,7 @@ export function toRows(
       id: a.id,
       name: a.name && a.name !== a.id ? a.name : 'new session',
       cwd: a.cwd ?? '',
+      group: launchDir(job.originCwd, a.cwd ?? ''),
       state,
       // The view's line: a finished job's result, a waiting job's question, else its progress.
       detail: (state === 'done' && job.output?.result) || (state === 'blocked' && job.needs) || job.detail || '',
@@ -118,11 +119,32 @@ export function nameWidth(names: string[], body: number, statusMin: number, extr
   return Math.max(4, Math.min(Math.max(0, ...names.map(n => n.length)), room))
 }
 
+// The folder a session is filed under, as the agents view files it: where it was
+// launched, so a session in `<repo>/.claude/worktrees/<name>` sits with `<repo>`.
+export function launchDir(origin: string | undefined, cwd: string) {
+  return origin || (cwd.match(/^(.+?)[/\\]\.claude[/\\]worktrees[/\\]/)?.[1] ?? cwd)
+}
+
+// Then, as the view does, the main checkout of the git repository that folder is in:
+// a subfolder joins its repository's root, and a linked worktree its main checkout.
+// Read from `.git` itself, no git process; ponytail: no cache eviction, a few dozen folders.
+export async function repoRoot(dir: string, read: (path: string) => Promise<string | null>, isDir: (path: string) => Promise<boolean | null>) {
+  for (let d = dir; d && d !== '/'; d = d.slice(0, d.lastIndexOf('/')) || '/') {
+    const kind = await isDir(`${d}/.git`)
+    if (kind === true) return d
+    if (kind === false) {
+      const pointer = (await read(`${d}/.git`))?.match(/^gitdir:\s*(.+)$/m)?.[1]?.trim() ?? ''
+      return pointer.includes('/.git/worktrees/') ? pointer.split('/.git/worktrees/')[0]! : d
+    }
+  }
+  return null
+}
+
 // Groups by folder, this session's own first, the rest by path; rows keep the CLI's order.
 export function groups(list: Row[], here: string, home: string) {
   const tilde = (p: string) => (home && p.startsWith(home) ? `~${p.slice(home.length)}` : p)
   const by = new Map<string, Row[]>()
-  for (const r of list) by.set(r.cwd, [...(by.get(r.cwd) ?? []), r])
+  for (const r of list) by.set(r.group, [...(by.get(r.group) ?? []), r])
   return [...by]
     .sort(([a], [b]) => (a === here ? -1 : b === here ? 1 : tilde(a).localeCompare(tilde(b))))
     .map(([cwd, rs]) => ({ dir: tilde(cwd), rows: rs }))
@@ -153,6 +175,7 @@ export const register: Register = (on, options) => {
   let spinner = spin(FRAMES)
   let frame = 0
   let rows: Row[] = []
+  let here = ''
   // The spinners the last drawing mounted; the timer repaints only these cells.
   let spinners: string[] = []
 
@@ -164,6 +187,17 @@ export const register: Register = (on, options) => {
     const wantsUsage = extras.some(x => x.option === 'showCpu' || x.option === 'showMemory')
     // `claude agents` is a whole CLI start, so it runs only when a session's registry
     // entry or job file changed, or every 30 s for ages and exits nothing rewrites.
+    const roots = new Map<string, string>()
+    const root = async (dir: string) => {
+      if (!roots.has(dir)) {
+        const found = await repoRoot(dir,
+          path => $.fs.read(path).then(t => t as string).catch(() => null),
+          path => $.fs.stat(path).then(st => st.kind === 'dir').catch(() => null))
+        roots.set(dir, found ?? dir)
+      }
+      return roots.get(dir)!
+    }
+    here = await root(launchDir(undefined, await $.session.cwd()))
     let seen = ''
     let lastRun = 0
     const changes = async () => {
@@ -206,6 +240,7 @@ export const register: Register = (on, options) => {
         }
       }
       const fresh = toRows(agents, jobs, reports, usage)
+      for (const r of fresh) r.group = await root(r.group)
       if (JSON.stringify(rows) === JSON.stringify(fresh)) return
       rows = fresh
       $.ui.invalidate('ui.render')
@@ -249,11 +284,10 @@ export const register: Register = (on, options) => {
     const { Box, Text } = $.ui.resolve(e)
     // Raster is the terminal's; elsewhere the spinner is a still glyph.
     const Raster = e.surface === 'terminal' ? $.ui.resolve(e as typeof e & { surface: 'terminal' }).Raster : undefined
-    const [list, here, home, now, version] = await Promise.all([
-      rows, $.session.cwd(), $.env.get('HOME'), $.clock.now(), $.session.version(),
-    ])
+    const list = rows
+    const [home, now, version, cwd] = await Promise.all([$.env.get('HOME'), $.clock.now(), $.session.version(), $.session.cwd()])
     spinners = list.filter(r => r.state === 'working').map(r => `spin-${r.id}`)
-    const tilde = home && here.startsWith(home) ? `~${here.slice(home.length)}` : here
+    const tilde = home && cwd.startsWith(home) ? `~${cwd.slice(home.length)}` : cwd
     // The view's mascot, its colours 174 on 16; it hides on narrow widths, as the view's does below 70.
     const CLAWD = '#d7875f'
     const mascot = e.props.bodyColumns >= 36 && (

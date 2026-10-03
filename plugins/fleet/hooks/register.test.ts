@@ -1,6 +1,6 @@
 import { test, expect } from 'claude-code/testing'
 
-import { EXTRAS, ago, cell, clip, counts, groups, nameWidth, spin, toRows, viewState } from './register'
+import { EXTRAS, ago, cell, clip, counts, groups, launchDir, nameWidth, repoRoot, spin, toRows, viewState } from './register'
 
 test('rows come from claude agents, with the job line and the view folder order', () => {
   const agents = [
@@ -93,4 +93,19 @@ test('the header counts as the view does: idle is working, every finish is compl
 test('a spinner cell packs one glyph, gray on the default background', () => {
   const words = new Uint32Array(Uint8Array.from(atob(cell('✻')), c => c.charCodeAt(0)).buffer)
   expect([...words]).toEqual([0x273b, 0x949494, 0x01000000])
+})
+
+test('worktree sessions are filed under the repository they were launched from', async () => {
+  expect(launchDir(undefined, '/h/cones/.claude/worktrees/fix-x')).toBe('/h/cones')
+  expect(launchDir(undefined, '/h/cones/.claude/worktrees/fix-x/src')).toBe('/h/cones')
+  expect(launchDir('/h/origin', '/h/cones/.claude/worktrees/fix-x')).toBe('/h/origin')
+  expect(launchDir(undefined, '/h/cones')).toBe('/h/cones')
+  // A subfolder joins its repository; a linked worktree elsewhere joins its main checkout.
+  const files: Record<string, string> = { '/h/wt/.git': 'gitdir: /h/cones/.git/worktrees/wt\n' }
+  const dirs = new Set(['/h/cones/.git'])
+  const read = async (p: string) => files[p] ?? null
+  const isDir = async (p: string) => (dirs.has(p) ? true : p in files ? false : null)
+  expect(await repoRoot('/h/cones/src/deep', read, isDir)).toBe('/h/cones')
+  expect(await repoRoot('/h/wt/src', read, isDir)).toBe('/h/cones')
+  expect(await repoRoot('/h/plain', read, isDir)).toBe(null)
 })
