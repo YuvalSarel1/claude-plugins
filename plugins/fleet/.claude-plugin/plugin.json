@@ -1,0 +1,88 @@
+{
+  "name": "fleet",
+  "version": "0.5.0",
+  "description": "Your claude agents list in a side pane, with optional cones columns",
+  "author": {
+    "name": "Yuval Sarel",
+    "url": "https://github.com/YuvalSarel1"
+  },
+  "repository": "https://github.com/YuvalSarel1/claude-plugins",
+  "license": "MIT OR Apache-2.0",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "spinner": {
+      "type": "boolean",
+      "title": "Spinner",
+      "description": "Animate working rows as Claude Code does; off saves about 2% CPU with four sessions working",
+      "default": true
+    },
+    "statusMin": {
+      "type": "number",
+      "title": "Status width",
+      "description": "Columns kept for the status text; long names shrink first",
+      "default": 20,
+      "min": 0,
+      "max": 120
+    },
+    "showModel": {
+      "type": "boolean",
+      "title": "Model column",
+      "description": "The model a background session runs",
+      "default": false
+    },
+    "showEffort": {
+      "type": "boolean",
+      "title": "Effort column",
+      "description": "The effort level a background session runs at",
+      "default": false
+    },
+    "showTokens": {
+      "type": "boolean",
+      "title": "Tokens column",
+      "description": "Tokens a background session has used",
+      "default": false
+    },
+    "showTasks": {
+      "type": "boolean",
+      "title": "Tasks column",
+      "description": "Background tasks a session has running",
+      "default": false
+    },
+    "showKind": {
+      "type": "boolean",
+      "title": "Kind column",
+      "description": "Background or interactive",
+      "default": false
+    },
+    "showPrompt": {
+      "type": "boolean",
+      "title": "Prompt column",
+      "description": "The session's first request",
+      "default": false
+    },
+    "showContext": {
+      "type": "boolean",
+      "title": "Context column",
+      "description": "Context used of the window, from the statusLine report cones reads",
+      "default": false
+    },
+    "showCost": {
+      "type": "boolean",
+      "title": "Cost column",
+      "description": "Session cost, from the statusLine report cones reads",
+      "default": false
+    },
+    "showCpu": {
+      "type": "boolean",
+      "title": "CPU column",
+      "description": "The session process's CPU, as ps reports it",
+      "default": false
+    },
+    "showMemory": {
+      "type": "boolean",
+      "title": "Memory column",
+      "description": "The session process's resident memory, as ps reports it",
+      "default": false
+    }
+  }
+}

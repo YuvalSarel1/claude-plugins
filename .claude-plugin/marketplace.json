@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "yuvalsarel1",
+  "description": "Claude Code plugins by Yuval Sarel",
+  "owner": {
+    "name": "Yuval Sarel",
+    "url": "https://github.com/YuvalSarel1"
+  },
+  "plugins": [
+    {
+      "name": "fleet",
+      "description": "Your claude agents list in a side pane, with optional cones columns",
+      "source": "./plugins/fleet",
+      "category": "productivity"
+    }
+  ]
+}
