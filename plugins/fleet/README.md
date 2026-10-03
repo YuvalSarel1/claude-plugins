@@ -49,18 +49,25 @@ printf '%s' "$input" > ~/.claude/statusline/"$(jq -r .session_id <<<"$input")".j
 
 This is the same file [cones](https://github.com/YuvalSarel1/cones) reads. Without it those two columns show `-`.
 
-## What it runs and reads
+## What it runs, reads and sends
 
-fleet makes no network requests and writes nothing outside Claude Code's own plugin storage. While the pane is on screen it:
+fleet sends nothing anywhere. It makes no network requests, starts no server, and writes nothing outside the plugin's own Claude Code storage, where it keeps your `/fleet` on or off choice.
 
-| Runs or reads | For |
+It starts two local programs, only while the pane is on screen:
+
+| Program | Exact command | Why |
+|---|---|---|
+| Claude Code | `claude agents --json --all` | The session list and each session's state. It runs when a session or job file changed, and at most every 30 seconds otherwise. |
+| `ps` | `ps -o pid=,%cpu=,rss= -p <pids>`, where `<pids>` are the process ids `claude agents` reported | CPU and Memory columns. It runs only when one of those columns is on. |
+
+It reads these files, all written by Claude Code or your own statusLine command:
+
+| File | Why |
 |---|---|
-| `claude agents --json --all` | The session list and states |
-| `~/.claude/sessions/*.json` and `~/.claude/jobs/*/state.json` | Spotting changes, and each row's line, age and the Model to Prompt columns |
+| `~/.claude/sessions/*.json`, `~/.claude/jobs/*/state.json` | Noticing changes, and each row's line, age and the Model to Prompt columns |
 | `~/.claude/statusline/<session>.json` | Context and Cost, when those columns are on |
-| `ps -o pid=,%cpu=,rss=` | CPU and Memory, when those columns are on |
 
-`CLAUDE_CONFIG_DIR` replaces `~/.claude` when it is set. Your `/fleet` choice is kept in the plugin's store.
+`CLAUDE_CONFIG_DIR` replaces `~/.claude` when it is set. What it reads is drawn in the pane and nowhere else.
 
 ## Limits
 
