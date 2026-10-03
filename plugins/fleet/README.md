@@ -17,7 +17,7 @@ The list comes from `claude agents --json --all`. States, lines and ages follow 
 |---|---|
 | Turn the pane on or off | `/fleet`. The choice holds across sessions. |
 | Where it shows | Docked beside the transcript in fullscreen from 110 columns; above the prompt otherwise. It opens by itself from 144 columns. |
-| Refresh | Every 3 seconds the pane checks the session files Claude Code writes, and reruns `claude agents` only when one changed, or every 30 seconds. Nothing runs while the pane is closed or hidden. |
+| Refresh | Every 3 seconds (the Refresh setting) the pane checks the session files Claude Code writes, and reruns `claude agents` only when one changed, or every 30 seconds. Nothing runs while the pane is closed or hidden. |
 
 ## Settings
 
@@ -27,6 +27,8 @@ Each setting is a row in `/config`. Extra columns are off, so the default row re
 |---|---|---|
 | Spinner | on | Working rows animate as in Claude Code. Off saves about 2% of a core with four sessions working. |
 | Status width | 20 | Columns kept for the status text. Long names shrink first. |
+| Pane width | 0 | Share of the terminal the docked pane takes, in percent. 0 keeps Claude Code's own width, about 45%. Dragging the pane's edge still wins. |
+| Refresh | 3 | Seconds between checks for changed sessions. |
 | Model | off | `opus[1m]` |
 | Effort | off | `medium` |
 | Tokens | off | `32.9k` |
@@ -81,8 +83,8 @@ fleet collects nothing and sends nothing. The session names, folders and prompts
 |---|---|
 | The pane is always on the right | Claude Code places plugin panes; a plugin cannot pick the side. |
 | Rows are not clickable | Open sessions from `claude agents` itself. |
-| Finished sessions' ages and folder order can differ from the agents view | Its exact rules are not published. |
-| Can break on a Claude Code update | The plugin API is early access, and `state.json` is not a documented format. |
+| No pinned group, PR column, `/loop` next-run time or live transcript line | Those come from files and lookups `claude agents --json` does not report. |
+| Can break on a Claude Code update | The view's rules are read from Claude Code 2.1.288, the plugin API is early access, and `state.json` is not a documented format. `bun assets/compare.ts` in the repo checks fleet against the live view. |
 
 ## License
 

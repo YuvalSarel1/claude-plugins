@@ -1,27 +1,65 @@
 import { test, expect } from 'claude-code/testing'
 
-import { EXTRAS, ago, cell, clip, counts, groups, launchDir, nameWidth, repoRoot, spin, toRows, viewState } from './register'
+import { EXTRAS, age, cell, clip, counts, detail, groups, icon, label, launchDir, nameWidth, repoRoot, settle, spin, toRows, viewState } from './register'
 
-test('rows come from claude agents, with the job line and the view folder order', () => {
+test('rows come from claude agents, oldest first, with the job line and the view folder order', () => {
   const agents = [
-    { id: 'a', name: 'old ask', cwd: '/h/cones', state: 'blocked', startedAt: 1 },
-    { id: 'b', name: 'b', cwd: '/h/trip', state: 'blocked', startedAt: 2 },
+    { id: 'd', name: 'mod', cwd: '/h/cones', state: 'working', startedAt: 4, pid: 1, status: 'busy' },
+    { id: 'a', name: 'old ask', cwd: '/h/cones', state: 'blocked', startedAt: 1, pid: 2 },
+    { id: 'b', name: 'b', cwd: '/h/trip', state: 'blocked', startedAt: 2, pid: 3 },
     { id: 'c', name: 'sync', cwd: '/h/a-work', state: 'done', startedAt: 3 },
-    { id: 'd', name: 'mod', cwd: '/h/cones', state: 'working', startedAt: 4 },
   ]
   const jobs = {
     a: { detail: 'say go', createdAt: '2026-10-01T00:00:00Z' },
-    c: { state: 'done', detail: 'short', output: { result: 'published' } },
+    c: { state: 'done', tempo: 'idle', detail: 'short', output: { result: 'published' } },
   }
   const rows = toRows(agents, jobs)
   expect(rows.map(r => [r.name, r.detail])).toEqual([
-    ['old ask', 'say go'], ['new session', ''], ['sync', 'published'], ['mod', ''],
+    ['new session', ''], ['sync', 'published'], ['mod', ''], ['old ask', 'say go'],
   ])
-  expect(rows[0]!.since).toBe(Date.parse('2026-10-01T00:00:00Z'))
+  // Folders sort by their full path, not as written with ~.
   expect(groups(rows, '/h/cones', '/h').map(g => [g.dir, g.rows.map(r => r.id)])).toEqual([
-    ['~/cones', ['a', 'd']], ['~/a-work', ['c']], ['~/trip', ['b']],
+    ['~/cones', ['d', 'a']], ['~/a-work', ['c']], ['~/trip', ['b']],
   ])
-  expect([ago(59_000), ago(9 * 60_000), ago(2 * 3600_000), ago(11 * 86400_000)]).toEqual(['59s', '9m', '2h', '11d'])
+})
+
+test('ages are how long a job ran: to its first finish, or until now', () => {
+  const t = Date.parse('2026-09-22T07:46:09.907Z')
+  // Two sessions from the live machine on 2026-10-03: the view showed 1m and 1h.
+  const [short, long] = toRows([
+    { id: 'x', name: 'n', cwd: '/', status: 'idle', pid: 1 },
+    { id: 'y', name: 'n', cwd: '/' },
+  ], {
+    x: { state: 'done', tempo: 'idle', createdAt: '2026-09-22T07:46:09.907Z', firstTerminalAt: '2026-09-22T07:47:24.048Z', updatedAt: '2026-10-03T12:39:46.411Z' },
+    y: { state: 'done', tempo: 'idle', createdAt: '2026-09-22T12:54:25.215Z', firstTerminalAt: '2026-09-22T14:28:41.530Z' },
+  })
+  expect([age(short!, Date.now()), age(long!, Date.now())]).toEqual(['1m', '1h'])
+  expect([short!.icon, long!.icon]).toEqual(['✻', '∙'])
+  const at = (ms: number) => age({ start: t, end: null }, t + ms)
+  expect([at(59_000), at(9 * 60_000), at(2 * 3600_000), at(11 * 86400_000)]).toEqual(['59s', '9m', '2h', '11d'])
+  // Seconds round, so 59m 59.6s is an hour, as the view's duration reads.
+  expect(at(3_599_600)).toBe('1h')
+})
+
+test('names are the session name, else the first three words of its request', () => {
+  expect(label({ name: 'tool hooks\nperformance' }, 'f')).toBe('tool hooks performance')
+  expect(label({ intent: 'retry delay should back off' }, 'f')).toBe('retry delay should…')
+  expect(label({ intent: 'supercalifragilistic expialidocious' }, 'f')).toBe('supercalifragilistic exp…')
+  expect(label({}, 'new session')).toBe('new session')
+})
+
+test('a dead job is shown failed, or blocked if it was waiting, as the view settles it', () => {
+  const old = '2026-10-01T00:00:00Z'
+  expect(settle({ state: 'working', tempo: 'active', createdAt: old, detail: 'x; respawning' }, false, Date.now()))
+    .toMatchObject({ state: 'failed', tempo: 'idle', detail: 'x' })
+  expect(settle({ state: 'blocked', tempo: 'idle', createdAt: old, respawnFlags: [] }, false, Date.now())).toMatchObject({ tempo: 'blocked' })
+  expect(settle({ state: 'working', createdAt: old }, true, Date.now()).state).toBe('working')
+  expect(settle({ state: 'working', createdAt: new Date().toISOString() }, false, Date.now()).state).toBe('working')
+})
+
+test('the line is one line: notices and tags out, a bare link result falls back to the progress', () => {
+  expect(detail({ state: 'working', detail: 'a\n<system-reminder>x</system-reminder>  b' })).toBe('a b')
+  expect(detail({ state: 'done', detail: 'opened PR', output: { result: 'https://x/pr/1' } })).toBe('opened PR')
 })
 
 test('clip keeps a name to its column with an ellipsis', () => {
@@ -32,6 +70,8 @@ test('clip keeps a name to its column with an ellipsis', () => {
 test('names shrink before the status drops below its minimum', () => {
   const names = ['session not working discrepancy'] // 31
   expect(nameWidth(names, 80, 20, 0)).toBe(31) // room 49
+  expect(nameWidth(['ab'], 80, 20, 0)).toBe(12) // the view's column is at least 12
+  expect(nameWidth(['x'.repeat(60)], 150, 20, 0)).toBe(50) // and at most 40 or a third
   expect(nameWidth(names, 62, 20, 0)).toBe(31) // room 31
   expect(nameWidth(names, 52, 20, 0)).toBe(21) // room 21
   expect(nameWidth(names, 52, 20, 11)).toBe(10) // a model column takes 11
@@ -75,6 +115,10 @@ test('states follow the agents view, not the json state', () => {
   expect(viewState({ state: 'blocked', tempo: 'blocked' }, undefined)).toBe('blocked')
   expect(viewState({ state: 'done', tempo: 'idle' }, undefined)).toBe('done')
   expect(viewState({}, 'waiting')).toBe('blocked')
+  // A recurring job that finished a run is waiting for the next one, not done.
+  expect(viewState({ state: 'done', tempo: 'idle', intent: '/loop 5m check' }, undefined)).toBe('idle')
+  expect(viewState({ state: 'done', tempo: 'active' }, 'busy')).toBe('working')
+  expect([icon({ state: 'done', tempo: 'idle', intent: '/loop x' }, 'idle'), icon({}, 'busy')]).toEqual(['✢', ''])
 })
 
 test('a waiting job shows its question, as the view does', () => {

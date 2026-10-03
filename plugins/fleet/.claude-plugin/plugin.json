@@ -1,6 +1,6 @@
 {
   "name": "fleet",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "description": "Your claude agents list in a side pane, with optional cones columns",
   "author": {
     "name": "Yuval Sarel",
@@ -24,6 +24,22 @@
       "default": 20,
       "min": 0,
       "max": 120
+    },
+    "width": {
+      "type": "number",
+      "title": "Pane width",
+      "description": "Share of the terminal the docked pane takes, in percent; 0 leaves Claude Code's own width. Dragging the pane edge still wins",
+      "default": 0,
+      "min": 0,
+      "max": 90
+    },
+    "refresh": {
+      "type": "number",
+      "title": "Refresh",
+      "description": "Seconds between checks for changed sessions; the list itself reloads only on a change, or every 30 s",
+      "default": 3,
+      "min": 1,
+      "max": 60
     },
     "showModel": {
       "type": "boolean",

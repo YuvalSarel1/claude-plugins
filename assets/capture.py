@@ -126,6 +126,8 @@ def fixtures(home, stand_ins):
         session = f"{short}-0000-4000-8000-{n + 1:012d}"
         started = now - minutes * 60
         stamp = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(started))
+        # A done session ran for a share of its time; the view's age is that run.
+        ended = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(started + minutes * 24))
         write_json(home / f"jobs/{short}/state.json", {
             "state": {"blocked": "blocked", "done": "done"}.get(state, "working"),
             "detail": "" if state == "blocked" else line,
@@ -133,10 +135,10 @@ def fixtures(home, stand_ins):
             "output": {"result": line} if state == "done" else None,
             "template": "bg", "respawnFlags": [], "intent": name, "name": name, "nameSource": "auto",
             "sessionId": session, "daemonShort": short, "cliVersion": "2.1.288",
-            "cwd": str(ROOT / "projects" / folder), "createdAt": stamp, "updatedAt": stamp,
-            "firstTerminalAt": stamp if state == "done" else None, "backend": "daemon",
+            "cwd": str(ROOT / "projects" / folder), "createdAt": stamp, "updatedAt": ended if state == "done" else stamp,
+            "firstTerminalAt": ended if state == "done" else None, "backend": "daemon",
             **({"needs": line} if state == "blocked" else {}),
-            **({"lastTerminalAt": stamp} if state == "done" else {}),
+            **({"lastTerminalAt": ended} if state == "done" else {}),
         })
         if state in ("working", "idle"):
             # `claude agents` keeps a live session's row while its pid runs.
@@ -266,7 +268,12 @@ def main():
     global ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--claude", type=Path, default=shutil.which("claude"))
-    claude = parser.parse_args().claude.resolve()
+    parser.add_argument("--set", action="append", default=[], metavar="OPTION=NUMBER",
+                        help="a fleet setting for this capture, e.g. width=50")
+    parser.add_argument("--out", type=Path, default=REPO / "plugins/fleet/assets/fleet.svg")
+    args = parser.parse_args()
+    claude = args.claude.resolve()
+    options = {k: float(v) for k, v in (o.split("=", 1) for o in args.set)}
     ROOT = Path(tempfile.mkdtemp(prefix="fd-", dir="/tmp")).resolve()
     home = ROOT / ".claude"
     bin_dir = ROOT / ".local/bin"
@@ -287,7 +294,7 @@ def main():
         "customApiKeyResponses": {"approved": ["fixture"], "rejected": []},
         "projects": {str(ROOT / "projects/api"): {"hasTrustDialogAccepted": True}},
     })
-    write_json(home / "settings.json", {"env": env_vars})
+    write_json(home / "settings.json", {"env": env_vars, "pluginConfigs": {"fleet@inline": {"options": options}}})
     stand_ins = []
     fixtures(home, stand_ins)
     env = {**env_vars, "HOME": str(ROOT), "CLAUDE_CONFIG_DIR": str(home),
@@ -323,7 +330,7 @@ def main():
     assert (ROOT / "projects/api/retry.py").read_text() == AFTER, "Claude did not make the edit"
     plain = tmux_plain = re.sub(r"\x1b\[[0-9;:]*m", "", ansi)
     assert "/Users/" not in plain and "/private/" not in plain, "a real path reached the image"
-    (REPO / "plugins/fleet/assets/fleet.svg").write_text(svg(cells(ansi)))
+    args.out.write_text(svg(cells(ansi)))
     shutil.rmtree(ROOT, ignore_errors=True)
     print(tmux_plain)
 

@@ -1,7 +1,8 @@
 import type { Register } from 'claude-code'
 
 export type Row = {
-  id: string; name: string; cwd: string; group: string; state: string; detail: string; since: number
+  id: string; sessionId: string; name: string; cwd: string; group: string; state: string; icon: string; detail: string
+  start: number; end: number | null
   model: string; effort: string; tokens: number | null; tasks: number | null; kind: string; prompt: string
   cpu: number | null; rss: number | null; cost: number | null; contextTokens: number | null; contextWindow: number | null
 }
@@ -19,28 +20,82 @@ export function cell(glyph: string) {
   return btoa(String.fromCharCode(...new Uint8Array(words.buffer)))
 }
 
-// Glyphs, words and 256-colour indexes as `claude agents` draws them (220, 114, 246).
-const GRAY_DIM = '#6c6c6c'
-const LOOK: Record<string, { icon: string; word: string; color?: string }> = {
-  blocked: { icon: '✻', word: 'Needs input', color: '#ffd700' },
-  working: { icon: '✶', word: 'Working' },
-  done: { icon: '∙', word: 'Done', color: '#87d787' },
-  idle: { icon: '✻', word: 'Idle', color: GRAY_DIM },
-  failed: { icon: '∙', word: 'Failed', color: '#ff6b80' },
-  stopped: { icon: '∙', word: 'Stopped', color: GRAY_DIM },
-}
+// Words and 256-colour indexes as `claude agents` draws them (220, 114, 246); dim draws as 246.
 const GRAY = '#949494'
+const LOOK: Record<string, { word: string; color?: string }> = {
+  blocked: { word: 'Needs input', color: '#ffd700' },
+  working: { word: 'Working' },
+  done: { word: 'Done', color: '#87d787' },
+  idle: { word: 'Idle', color: GRAY },
+  failed: { word: 'Failed', color: '#ff6b80' },
+  stopped: { word: 'Stopped', color: GRAY },
+}
 
-// The word the agents view shows, by its own rule: a finished job first, then the live
-// process (busy or shell is working), then a job or process waiting on the person, else idle.
+// What follows is the agents view's own logic, read from Claude Code 2.1.288; the
+// names in brackets are its minified functions, for checking a later version against.
+const END: Record<string, string> = { done: 'done', failed: 'failed', stopped: 'stopped' }
+const loops = (job: any) => [job.intent, job.initialPrompt].some(s => typeof s === 'string' && s.trim().toLowerCase().startsWith('/loop'))
+const recurring = (job: any) => job.routine !== undefined || job.selfWake === true || job.inFlight?.kinds?.includes('session_cron') === true || loops(job)
+// Finished as the view counts it: a recurring job that ended is waiting for its next run [zi, HG].
+const finished = (job: any) => !!END[job.state] && job.tempo !== 'active' && !(job.state === 'done' && recurring(job))
+
+// A job that is not finished, not live and older than 5 s died without saying so:
+// the view shows it failed, or still blocked if it was waiting on the person [wYe].
+export function settle(job: any, live: boolean, now: number) {
+  if (!job.state || (END[job.state] && job.tempo !== 'active') || live || now - Date.parse(job.createdAt) < 5000) return job
+  if (job.state === 'blocked' && !(job.template === 'exec' && !job.respawnFlags?.length)) return { ...job, tempo: 'blocked' }
+  return { ...job, state: 'failed', tempo: 'idle', needs: undefined, detail: String(job.detail ?? '').replace(/; respawning$/, '') }
+}
+
+// The word: a finished job first, then the live process (busy or shell is working),
+// then a job or process waiting on the person, else idle [gn].
 // `claude agents --json` reports `working` for an idle live session, so its `state` is not used.
 export function viewState(job: any, status: string | undefined) {
-  if (job.state === 'done') return 'done'
-  if (job.state === 'failed') return 'failed'
-  if (job.state === 'stopped' || job.state === 'killed') return 'stopped'
+  if (finished(job)) return END[job.state]!
   if (status === 'busy' || status === 'shell') return 'working'
   if (job.tempo === 'blocked' || status === 'waiting') return 'blocked'
   return 'idle'
+}
+
+// The glyph: a dot once the job and its process are gone, the spinner while working,
+// else a still frame, ✢ for a /loop [Wn].
+export function icon(job: any, status: string | undefined) {
+  if (END[job.state] && job.tempo !== 'active' && status === undefined) return '∙'
+  if (status === 'busy' || status === 'shell') return ''
+  return loops(job) ? FRAMES[1]! : FRAMES[4]!
+}
+
+// The name: the session's own, else its request's first three words, at most 25 [Co].
+export function label(job: any, fallback: string) {
+  if (job.name) return line(job.name)
+  const words = line(job.displayIntent ?? job.intent ?? '').split(' ').filter(Boolean)
+  if (!words.length) return fallback
+  const s = words.length > 3 ? `${words.slice(0, 3).join(' ')}…` : words.join(' ')
+  return s.length <= 25 ? s : `${s.slice(0, 24)}…`
+}
+
+// One line of plain text, notices and tags taken out [Gt].
+export function line(s: string) {
+  return String(s).replace(/<(system-reminder|task-notification)>[\s\S]*?(<\/\1>|$)/g, ' ').replace(/<\/?[\w-]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+// The line after the word: a done job's result (unless it is only a link), a waiting
+// job's question, else its progress [us].
+export function detail(job: any) {
+  const result = job.output?.result
+  if (job.state === 'done') return line(result && !/^https?:\/\/\S+$/.test(result.trim()) ? result : job.detail ?? '')
+  return line((job.tempo === 'blocked' && job.needs) || job.detail || '')
+}
+
+// The age: how long the job ran, up to its first finish, or has run so far [Fm, Jt].
+export function age(row: Pick<Row, 'start' | 'end'>, now: number) {
+  const ms = Math.max(0, (row.end ?? now) - row.start)
+  if (ms < 60_000) return `${Math.floor(ms / 1000)}s`
+  let d = Math.floor(ms / 86_400_000), h = Math.floor((ms % 86_400_000) / 3_600_000), m = Math.floor((ms % 3_600_000) / 60_000)
+  if (Math.round((ms % 60_000) / 1000) === 60) m++
+  if (m === 60) m = 0, h++
+  if (h === 24) h = 0, d++
+  return d ? `${d}d` : h ? `${h}h` : `${m}m`
 }
 
 export type Usage = { cpu: number; rss: number }
@@ -53,21 +108,23 @@ export function toRows(
   jobs: Record<string, any>,
   reports: Record<string, any> = {},
   usage: Record<number, Usage> = {},
+  now = Date.now(),
 ): Row[] {
-  return agents.map(a => {
-    const job = jobs[a.id] ?? {}
+  const rows = agents.map(a => {
+    const job = settle(jobs[a.id] ?? {}, a.pid !== undefined || a.status !== undefined, now)
     const report = reports[a.sessionId] ?? {}
-    const now = report.context_window?.current_usage
-    const state = viewState(job, a.status)
+    const usageNow = report.context_window?.current_usage
     return {
-      id: a.id,
-      name: a.name && a.name !== a.id ? a.name : 'new session',
+      id: a.id ?? `pid-${a.pid}`,
+      sessionId: a.sessionId ?? '',
+      name: label(job, a.name && a.name !== a.id ? a.name : 'new session'),
       cwd: a.cwd ?? '',
       group: launchDir(job.originCwd, a.cwd ?? ''),
-      state,
-      // The view's line: a finished job's result, a waiting job's question, else its progress.
-      detail: (state === 'done' && job.output?.result) || (state === 'blocked' && job.needs) || job.detail || '',
-      since: Date.parse(job.createdAt ?? '') || a.startedAt || 0,
+      state: viewState(job, a.status),
+      icon: icon(job, a.status),
+      detail: detail(job),
+      start: Date.parse(job.createdAt ?? '') || a.startedAt || 0,
+      end: finished(job) ? Date.parse(job.firstTerminalAt ?? job.updatedAt) || null : null,
       model: flag(job.respawnFlags, '--model'),
       effort: flag(job.respawnFlags, '--effort'),
       tokens: typeof job.tokens === 'number' ? job.tokens : null,
@@ -77,10 +134,12 @@ export function toRows(
       cpu: usage[a.pid]?.cpu ?? null,
       rss: usage[a.pid]?.rss ?? null,
       cost: typeof report.cost?.total_cost_usd === 'number' ? report.cost.total_cost_usd : null,
-      contextTokens: now ? (now.input_tokens ?? 0) + (now.cache_creation_input_tokens ?? 0) + (now.cache_read_input_tokens ?? 0) : null,
+      contextTokens: usageNow ? (usageNow.input_tokens ?? 0) + (usageNow.cache_creation_input_tokens ?? 0) + (usageNow.cache_read_input_tokens ?? 0) : null,
       contextWindow: report.context_window?.context_window_size ?? null,
     }
   })
+  // Oldest first within each folder, as the view lists them [Pi].
+  return rows.sort((x, y) => x.start - y.start)
 }
 
 function flag(flags: unknown, name: string) {
@@ -111,12 +170,12 @@ function bytes(n: number) {
   return n < 1_048_576 ? `${Math.floor(n / 1024)}K` : n < 1_073_741_824 ? `${Math.floor(n / 1_048_576)}M` : `${(n / 1_073_741_824).toFixed(1)}G`
 }
 
-// The name column: as wide as the longest name, less whatever the status needs to keep
-// `statusMin` columns; the view's margin of one each side, icon 2, gap 2, age 5,
-// and one space before each extra.
-export function nameWidth(names: string[], body: number, statusMin: number, extras: number) {
-  const room = body - 2 - 2 - 2 - 5 - extras - statusMin
-  return Math.max(4, Math.min(Math.max(0, ...names.map(n => n.length)), room))
+// The name column: as the view sizes it, the longest name but at least 12 and at most
+// 40 or a third of the width [Uu]; then less whatever keeps `statusMin` columns for the
+// status, after the margin of one each side, icon 2, gap 2, the age and the extras.
+export function nameWidth(names: string[], body: number, statusMin: number, extras: number, ageWidth = 5) {
+  const view = Math.min(Math.max(40, Math.floor(body / 3)), Math.max(12, ...names.map(n => n.length)))
+  return Math.max(4, Math.min(view, body - 2 - 2 - 2 - ageWidth - extras - statusMin))
 }
 
 // The folder a session is filed under, as the agents view files it: where it was
@@ -140,13 +199,13 @@ export async function repoRoot(dir: string, read: (path: string) => Promise<stri
   return null
 }
 
-// Groups by folder, this session's own first, the rest by path; rows keep the CLI's order.
+// Groups by folder, this session's own first, the rest by path [ec].
 export function groups(list: Row[], here: string, home: string) {
   const tilde = (p: string) => (home && p.startsWith(home) ? `~${p.slice(home.length)}` : p)
   const by = new Map<string, Row[]>()
   for (const r of list) by.set(r.group, [...(by.get(r.group) ?? []), r])
   return [...by]
-    .sort(([a], [b]) => (a === here ? -1 : b === here ? 1 : tilde(a).localeCompare(tilde(b))))
+    .sort(([a], [b]) => (a === here ? -1 : b === here ? 1 : a.localeCompare(b)))
     .map(([cwd, rs]) => ({ dir: tilde(cwd), rows: rs }))
 }
 
@@ -160,22 +219,24 @@ export function clip(s: string, n: number) {
   return s.length <= n ? s : `${s.slice(0, Math.max(0, n - 1))}…`
 }
 
-export function ago(ms: number) {
-  const s = Math.max(0, Math.floor(ms / 1000))
-  if (s < 60) return `${s}s`
-  if (s < 3600) return `${Math.floor(s / 60)}m`
-  if (s < 86400) return `${Math.floor(s / 3600)}h`
-  return `${Math.floor(s / 86400)}d`
-}
-
 export const register: Register = (on, options) => {
   const extras = EXTRAS.filter(x => options[x.option] === true)
   const statusMin = typeof options.statusMin === 'number' ? options.statusMin : 20
+  const refreshMs = Math.max(1, typeof options.refresh === 'number' ? options.refresh : 3) * 1000
+  const widthPct = typeof options.width === 'number' ? options.width : 0
+  // The dock's width as a share of the terminal; the person's own drag still wins.
+  let sized = false
+  const pane = (terminal?: number) => {
+    const columns = widthPct > 0 && terminal ? Math.max(20, Math.round((terminal * widthPct) / 100)) : undefined
+    if (columns) sized = true
+    return { id: PANE, title: 'Agents', ...(columns && { columns }) }
+  }
   let poll = async (_force?: boolean) => {}
   let spinner = spin(FRAMES)
   let frame = 0
   let rows: Row[] = []
   let here = ''
+  let mine = ''
   // The spinners the last drawing mounted; the timer repaints only these cells.
   let spinners: string[] = []
 
@@ -198,6 +259,7 @@ export const register: Register = (on, options) => {
       return roots.get(dir)!
     }
     here = await root(launchDir(undefined, await $.session.cwd()))
+    mine = await $.session.id()
     let seen = ''
     let lastRun = 0
     const changes = async () => {
@@ -245,7 +307,7 @@ export const register: Register = (on, options) => {
       rows = fresh
       $.ui.invalidate('ui.render')
     }
-    $.clock.every(3000, () => void poll())
+    $.clock.every(refreshMs, () => void poll())
     // Ages move once a minute; nothing else redraws without a change.
     $.clock.every(60_000, () => $.ui.invalidate('ui.render'))
     spinner = spin((await $.env.get('TERM')) === 'xterm-ghostty' ? GHOSTTY : FRAMES)
@@ -262,19 +324,19 @@ export const register: Register = (on, options) => {
       }
     })
     // The person's last /fleet choice holds across sessions.
-    if ((await $.store.get('hidden')) !== true) void $.ui.open({ id: PANE, title: 'Agents' }).then(() => poll(true))
+    if ((await $.store.get('hidden')) !== true) void $.ui.open(pane()).then(() => poll(true))
 
     return next(e)
   })
 
-  on('command.run', { command: 'fleet' }, async $ => {
+  on('command.run', { command: 'fleet' }, async ($, e) => {
     const isOpen = (await $.ui.panes()).some(p => p.id === PANE && p.isPlaced)
     await $.store.set('hidden', isOpen)
     if (isOpen) {
       await $.ui.close({ id: PANE })
       return { text: 'Agents pane off.' }
     }
-    await $.ui.open({ id: PANE, title: 'Agents' })
+    await $.ui.open(pane(e.presentation.columns))
     await poll(true)
 
     return { text: 'Agents pane on.' }
@@ -285,6 +347,11 @@ export const register: Register = (on, options) => {
     // Raster is the terminal's; elsewhere the spinner is a still glyph.
     const Raster = e.surface === 'terminal' ? $.ui.resolve(e as typeof e & { surface: 'terminal' }).Raster : undefined
     const list = rows
+    // The terminal's width is first known here, so a pane opened at start is sized once now:
+    // the viewport is the conversation's columns, and the dock its body and border beside it.
+    if (!sized && widthPct > 0 && e.viewport?.columns && e.props.placement === 'dock') {
+      void $.ui.open(pane(e.viewport.columns + e.props.bodyColumns + 1))
+    }
     const [home, now, version, cwd] = await Promise.all([$.env.get('HOME'), $.clock.now(), $.session.version(), $.session.cwd()])
     spinners = list.filter(r => r.state === 'working').map(r => `spin-${r.id}`)
     const tilde = home && cwd.startsWith(home) ? `~${cwd.slice(home.length)}` : cwd
@@ -300,7 +367,9 @@ export const register: Register = (on, options) => {
 
     // One line per agent as the view draws it: names share a column, clipped to keep it.
     const extraWidth = extras.reduce((n, x) => n + x.width + 1, 0)
-    const nameCols = nameWidth(list.map(r => r.name), e.props.bodyColumns, statusMin, extraWidth)
+    const ages = new Map(list.map(r => [r.id, age(r, now)]))
+    const ageWidth = Math.max(3, ...[...ages.values()].map(a => a.length)) + 2
+    const nameCols = nameWidth(list.map(r => r.name), e.props.bodyColumns, statusMin, extraWidth, ageWidth)
 
     return (
       <Box flexDirection="column">
@@ -315,18 +384,20 @@ export const register: Register = (on, options) => {
         {list.length === 0 && <Text color={GRAY}>No sessions.</Text>}
         {groups(list, here, home ?? '').map(g => (
           <Box flexDirection="column" marginBottom={1}>
-            <Text bold color={GRAY} wrap="truncate">{g.dir}</Text>
+            <Text color={GRAY} wrap="truncate">{g.dir}</Text>
             {g.rows.map(r => {
-              const look = LOOK[r.state] ?? { icon: '∙', word: r.state }
+              const look = LOOK[r.state] ?? { word: r.state }
+              // This session's own row reads bold and undimmed, as the view draws the one it was opened from.
+              const own = r.sessionId !== '' && r.sessionId === mine
               return (
                 <Box flexDirection="row" paddingLeft={1} paddingRight={1}>
                   <Box width={2} flexShrink={0}>
                     {r.state === 'working' && Raster
                       ? <Raster key={`spin-${r.id}`} columns={1} rows={1} cells={cell(spinner[frame]!)} />
-                      : <Text color={look.color ?? GRAY}>{look.icon}</Text>}
+                      : <Text color={look.color ?? GRAY}>{r.icon || spinner[frame]}</Text>}
                   </Box>
                   <Box width={nameCols + 2} flexShrink={0}>
-                    <Text color={GRAY}>{clip(r.name, nameCols)}</Text>
+                    <Text color={own ? undefined : GRAY} bold={own}>{clip(r.name, nameCols)}</Text>
                   </Box>
                   <Box flexGrow={1} flexShrink={1} minWidth={0}>
                     <Text wrap="truncate">
@@ -339,8 +410,8 @@ export const register: Register = (on, options) => {
                       <Text color={GRAY}>{clip(x.cell(r), x.width)}</Text>
                     </Box>
                   ))}
-                  <Box width={5} flexShrink={0} justifyContent="flex-end">
-                    <Text color={GRAY}>{ago(now - r.since)}</Text>
+                  <Box width={ageWidth} flexShrink={0} justifyContent="flex-end">
+                    <Text color={GRAY}>{ages.get(r.id)}</Text>
                   </Box>
                 </Box>
               )
