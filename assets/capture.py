@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record assets/fleet.svg: a real Claude Code session with the fleet pane beside it.
+"""Record plugins/fleet/assets/fleet.svg: a real Claude Code session with the fleet pane beside it.
 
 Run: python3 assets/capture.py [--claude /path/to/claude]
 
@@ -323,7 +323,7 @@ def main():
     assert (ROOT / "projects/api/retry.py").read_text() == AFTER, "Claude did not make the edit"
     plain = tmux_plain = re.sub(r"\x1b\[[0-9;:]*m", "", ansi)
     assert "/Users/" not in plain and "/private/" not in plain, "a real path reached the image"
-    (REPO / "assets/fleet.svg").write_text(svg(cells(ansi)))
+    (REPO / "plugins/fleet/assets/fleet.svg").write_text(svg(cells(ansi)))
     shutil.rmtree(ROOT, ignore_errors=True)
     print(tmux_plain)
 
