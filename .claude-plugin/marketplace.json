@@ -14,6 +14,12 @@
       "category": "productivity"
     },
     {
+      "name": "images",
+      "description": "Every image in the conversation in a strip above the prompt: pasted and read by Claude",
+      "source": "./plugins/images",
+      "category": "productivity"
+    },
+    {
       "name": "qa-evidence",
       "description": "Evidence-first exploratory QA over Chrome DevTools Protocol: state-matrix sweeps, annotated screenshots that refuse to mislead, a review page",
       "source": "./plugins/qa-evidence",

@@ -1,0 +1,12 @@
+{
+  "name": "images",
+  "version": "0.1.0",
+  "description": "Every image in the conversation in a strip above the prompt: the ones you paste and the ones Claude reads",
+  "author": {
+    "name": "Yuval Sarel",
+    "url": "https://github.com/YuvalSarel1"
+  },
+  "repository": "https://github.com/YuvalSarel1/claude-plugins",
+  "homepage": "https://github.com/YuvalSarel1/claude-plugins/tree/main/plugins/images",
+  "license": "MIT OR Apache-2.0"
+}

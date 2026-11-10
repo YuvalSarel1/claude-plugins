@@ -9,6 +9,7 @@ Claude Code plugins by Yuval Sarel. Add the marketplace once, then install what 
 | Plugin | What it does |
 |---|---|
 | [fleet](plugins/fleet) | Your `claude agents` list in a side pane, with optional model, context, cost, CPU and memory columns |
+| [images](plugins/images) | Every image in the conversation in a strip above the prompt: the ones you paste and the ones Claude reads |
 
 ![Claude Code with the fleet pane beside the conversation](plugins/fleet/assets/fleet.svg)
 
