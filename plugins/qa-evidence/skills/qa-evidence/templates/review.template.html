@@ -1,0 +1,317 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+--bg:#101114;--panel:#16171b;--line:#23252b;--line2:#2c2f37;
+--fg:#eceef2;--dim:#8a8f9a;--dim2:#6b7080;
+--bug:#eb5757;--judge:#f2994a;--open:#5e6ad2;--ok:#4cb782;--gray:#62666d;
+--acc:#5e6ad2;
+}
+*{box-sizing:border-box}
+html{-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--fg);
+font:16.2px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px 96px}
+
+header{padding:26px 0 19.2px;border-bottom:1px solid var(--line);margin-bottom:2px}
+h1{font-size:20.4px;font-weight:600;margin:0 0 3px;letter-spacing:-.01em}
+.meta{color:var(--dim);font-size:15px}
+.meta b{color:var(--fg);font-weight:500}
+
+.stats{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0 0}
+.stat{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);
+border-radius:6px;padding:5px 12px;font-size:14.4px;cursor:pointer;color:var(--dim);white-space:nowrap}
+.stat:hover{border-color:var(--line2)}
+.stat.on{border-color:var(--acc);color:var(--fg);background:#191b24}
+.stat .dot{width:7px;height:7px;border-radius:50%}
+.stat b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+
+.grp{margin:26.4px 0 0}
+.grp-h{display:flex;align-items:center;gap:9px;padding:7px 2px;position:sticky;top:0;
+background:var(--bg);z-index:5;border-bottom:1px solid var(--line)}
+.grp-h .t{font-size:14.4px;font-weight:600;letter-spacing:.02em}
+.grp-h .c{font-size:13.8px;color:var(--dim2);font-variant-numeric:tabular-nums}
+.grp-h .bar{flex:1}
+.grp-h .sub{font-size:13.8px;color:var(--dim2);font-weight:400}
+.grp-h .area{color:var(--dim);font-size:13.2px;letter-spacing:.06em;text-transform:uppercase}
+
+.row{display:grid;grid-template-columns:19.2px 1fr auto 26.4px;gap:13.2px;align-items:start;
+padding:12px 6px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:hover{background:#14151a}
+.row .sd{width:9px;height:9px;border-radius:50%;margin-top:5px}
+.row .ttl{font-size:16.2px;line-height:1.45}
+.row.done .ttl{color:var(--dim2);text-decoration:line-through}
+.chip{font-size:12.6px;color:var(--dim);border:1px solid var(--line2);border-radius:4px;
+padding:2px 6px;white-space:nowrap;margin-top:2px}
+.box{width:21.6px;height:21.6px;border:1.5px solid var(--line2);border-radius:4px;background:#0d0e11;
+display:grid;place-items:center;font-size:13.2px;margin-top:2px}
+.box.ok{background:var(--ok);border-color:var(--ok);color:#0d0e11}
+.box.no{background:var(--bug);border-color:var(--bug);color:#fff}
+.box.none{border:none;background:none}
+
+.det{padding:2px 0 4px;display:none}
+.row.open2 .det{display:block}
+.ev{font-size:15px;color:var(--dim);background:var(--panel);border:1px solid var(--line);
+border-left:2px solid var(--line2);border-radius:5px;padding:9px 13.2px;margin:7px 0 0;line-height:1.55}
+.ev .lbl{color:var(--dim2);font-size:12.6px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:4px}
+.ev code{background:#0d0e11;border:1px solid var(--line);border-radius:3px;padding:1px 4px;
+font:13.8px ui-monospace,SFMono-Regular,Menlo,monospace;color:#b9bfcc}
+textarea{margin:7px 0 0;width:100%;background:#0d0e11;border:1px solid var(--line2);border-radius:5px;
+color:var(--fg);padding:7px 9px;font:15px inherit;resize:vertical;min-height:32px}
+textarea:focus{outline:none;border-color:var(--acc)}
+
+.bar-b{position:fixed;left:0;right:0;bottom:0;background:rgba(16,17,20,.94);backdrop-filter:blur(8px);
+border-top:1px solid var(--line);padding:12px 24px;display:flex;gap:16.8px;align-items:center;font-size:15px}
+.bar-b .track{flex:1;height:4px;background:#0d0e11;border-radius:99px;overflow:hidden;max-width:320px}
+.bar-b .fill{height:100%;background:var(--ok);width:0;transition:width .25s}
+.bar-b button{background:transparent;border:1px solid var(--line2);color:var(--dim);border-radius:5px;
+padding:5px 13.2px;font-size:14.4px;cursor:pointer;font-family:inherit}
+.bar-b button:hover{color:var(--fg);border-color:var(--acc)}
+.bar-b .sp{flex:1}
+.hint{color:var(--dim2);font-size:13.8px}
+@media(max-width:720px){.row{grid-template-columns:19.2px 1fr 26.4px}.row .chip{display:none}}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:8px;margin:8px 0 0}
+.shots .sh{display:block;border:1px solid var(--line2);border-radius:5px;overflow:hidden;background:#0d0e11;
+line-height:0;cursor:zoom-in;position:relative}
+.shots .sh:hover{border-color:var(--acc)}
+.shots img{width:100%;height:auto;display:block}
+.shots .cap{position:absolute;left:0;bottom:0;right:0;background:rgba(13,14,17,.82);color:var(--dim);
+font-size:12.6px;line-height:1.9;padding:0 7px;letter-spacing:.02em}
+
+#lb{position:fixed;inset:0;background:rgba(8,9,12,.94);z-index:99;display:none;overflow:auto}
+#lb.on{display:block}
+#lb .stage{min-height:100%;display:flex;align-items:safe center;justify-content:safe center;padding:52px 24px}
+#lb img{max-width:95vw;max-height:86vh;border-radius:6px;box-shadow:0 24px 70px rgba(0,0,0,.6);cursor:zoom-in}
+#lb img.z{max-width:none;max-height:none;width:210vw;cursor:zoom-out}
+#lb .top{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;gap:14.4px;
+padding:13.2px 19.2px;background:linear-gradient(rgba(8,9,12,.95),rgba(8,9,12,0));font-size:15px;color:var(--dim)}
+#lb .top .sp{flex:1}
+#lb button{background:#16171b;border:1px solid var(--line2);color:var(--fg);border-radius:6px;
+padding:6px 14.4px;font:15.6px inherit;cursor:pointer}
+#lb button:hover{border-color:var(--acc)}
+#lb .nav{position:fixed;top:50%;transform:translateY(-50%);font-size:26.4px;padding:16.8px 20.4px;line-height:1}
+#lb .prev{left:16.8px}#lb .next{right:16.8px}
+#lb .name{font-variant-numeric:tabular-nums}
+.links{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 0}
+.lk{font-size:13.8px;color:#a9b1ff;background:#171a26;border:1px solid #2b3050;border-radius:5px;
+padding:4px 9px;text-decoration:none;white-space:nowrap}
+.lk:hover{border-color:var(--acc);color:#c9cfff}
+</style>
+<div class="wrap">
+<header>
+  <h1 id="title"></h1>
+  <div class="meta" id="subtitle"></div>
+  <div class="stats" id="stats"></div>
+</header>
+<div id="body"></div>
+</div>
+<div id="lb">
+  <div class="top"><span class="name" id="lbname"></span><span class="sp"></span>
+    <span class="hint">click image to zoom &middot; &larr; &rarr; to switch &middot; Esc to close</span>
+    <button id="lbclose">Close</button></div>
+  <button class="nav prev" id="lbprev">&lsaquo;</button>
+  <button class="nav next" id="lbnext">&rsaquo;</button>
+  <div class="stage"><img id="lbimg" alt=""></div>
+</div>
+<div class="bar-b">
+  <span id="count">0 / 0</span>
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <span class="hint">click a row to expand</span>
+  <span class="sp"></span>
+  <button id="copy">Copy report</button><button id="reset">Reset mine</button>
+</div>
+
+{{DOC}}
+<script>
+const DATA={{DATA}};
+
+/* Escaping. Every value out of DATA passes through esc, rich or url before it
+   reaches innerHTML, so an apostrophe or a quote in a finding cannot break the page. */
+const ENT={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>ENT[c]);
+/* Evidence and subtitle keep one closed list of inline tags: b, i, em, code, br.
+   Everything else is escaped, including any tag not on the list. */
+const rich=s=>esc(s).replace(/&lt;(\/?)(b|i|em|code|br)\s*\/?&gt;/gi,
+  (m,sl,t)=>t.toLowerCase()==='br'?'<br>':'<'+sl+t.toLowerCase()+'>');
+/* Only navigable schemes. Anything else, javascript: included, renders as a dead link. */
+const url=u=>/^(https?:\/\/|mailto:|\/(?!\/)|\.|#)/i.test(String(u==null?'':u))?esc(u):'#';
+/* Screenshot file names are path segments under shots/, never a way out of it. */
+const shot=f=>'shots/'+encodeURIComponent(String(f==null?'':f).replace(/^.*[\\/]/,''));
+/* A shot is {file, caption}. An uncaptioned shot falls back to its file name, which
+   rules/screenshots.md calls a bad caption, so the generator warns about it too. */
+const capOf=s=>(s&&s.caption)?String(s.caption):String((s&&s.file)||'').replace(/\.(png|jpe?g|webp|gif)$/i,'');
+
+const PAL={fix:'var(--bug)',unproven:'var(--open)',verified:'var(--ok)',context:'var(--gray)'};
+const FALL=['var(--bug)','var(--open)','var(--ok)','var(--judge)','var(--gray)','var(--acc)'];
+const CATS=(DATA.categories||[]).slice()
+  .sort((a,b)=>(a.order==null?99:a.order)-(b.order==null?99:b.order));
+CATS.forEach((c,n)=>{c.color=c.color||PAL[c.id]||FALL[n%FALL.length];c.tick=c.tick!==false;});
+const META={};CATS.forEach(c=>META[c.id]=c);
+const ITEMS=(DATA.items||[]).filter(it=>META[it.category]);
+/* Verified is sub-grouped by area, because that group is long and read by area.
+   Any category can opt in with groupByArea:true. */
+const byArea=c=>c.groupByArea===true||(c.groupByArea!==false&&c.id==='verified');
+/* Copy report mode per category: untickable lists titles only, verified reports a
+   count, everything else prints in full. Override with report:"full"|"count"|"titles". */
+const mode=c=>c.report||(c.tick===false?'titles':c.id==='verified'?'count':'full');
+
+/* State keys are content, not row order, so regenerating with new rows keeps the ticks.
+   Renaming a title starts that row fresh. */
+const KEY=DATA.storageKey||'review';
+const kOf=it=>it.category+'|'+(it.area||'')+'|'+it.title;
+let S=JSON.parse(localStorage.getItem(KEY)||'{}');
+if(!S.state)S.state={};if(!S.note)S.note={};
+const save=()=>localStorage.setItem(KEY,JSON.stringify(S));
+let filt=S.filter||null;
+
+document.title=DATA.title||'Review';
+document.getElementById('title').textContent=DATA.title||'Review';
+document.getElementById('subtitle').innerHTML=rich(DATA.subtitle||'');
+
+function extras(it,i){
+  let h='';
+  const sh=it.shots||[],lk=it.links||[];
+  if(sh.length){
+    h+='<div class="shots">'+sh.map((s,n)=>
+      `<span class="sh" data-i="${i}" data-n="${n}"><img src="${shot(s.file)}" alt="" loading="lazy">
+        <span class="cap">${esc(capOf(s))}</span></span>`).join('')+'</div>';
+  }
+  if(lk.length){
+    h+='<div class="links">'+lk.map(l=>
+      `<a class="lk" href="${url(l[1])}" target="_blank" rel="noopener">${esc(l[0])} &nearr;</a>`).join('')+'</div>';
+  }
+  return h;
+}
+
+/* Lightbox: zoom, prev and next within the row's shots, Esc and backdrop to close. */
+let lbSet=[],lbN=0;
+const lbImg=()=>document.getElementById('lbimg');
+function showLb(){
+  const s=lbSet[lbN];
+  lbImg().src=shot(s.file); lbImg().classList.remove('z');
+  document.getElementById('lbname').textContent=capOf(s)+'  ('+(lbN+1)+'/'+lbSet.length+')';
+  const one=lbSet.length<2;
+  document.getElementById('lbprev').style.display=one?'none':'';
+  document.getElementById('lbnext').style.display=one?'none':'';
+  document.getElementById('lb').scrollTop=0;
+}
+function openLb(set,n){if(!set.length)return;lbSet=set;lbN=n;document.getElementById('lb').classList.add('on');showLb();}
+function closeLb(){document.getElementById('lb').classList.remove('on');}
+function stepLb(d){if(!lbSet.length)return;lbN=(lbN+d+lbSet.length)%lbSet.length;showLb();}
+document.getElementById('lbclose').onclick=closeLb;
+document.getElementById('lbprev').onclick=e=>{e.stopPropagation();stepLb(-1);};
+document.getElementById('lbnext').onclick=e=>{e.stopPropagation();stepLb(1);};
+document.getElementById('lbimg').onclick=e=>{e.stopPropagation();lbImg().classList.toggle('z');};
+document.getElementById('lb').onclick=closeLb;
+document.addEventListener('keydown',e=>{
+  if(!document.getElementById('lb').classList.contains('on'))return;
+  if(e.key==='Escape')closeLb();
+  if(e.key==='ArrowRight')stepLb(1);
+  if(e.key==='ArrowLeft')stepLb(-1);
+});
+
+function row(it,i){
+  const c=META[it.category],k=kOf(it),st=S.state[k]||'',note=S.note[k]||'';
+  return `<div class="row ${st==='ok'?'done':''} ${note?'open2':''}" data-i="${i}">
+    <span class="sd" style="background:${esc(c.color)}"></span>
+    <div><div class="ttl">${esc(it.title)}</div>
+      <div class="det"><div class="ev"><span class="lbl">what was found</span>${rich(it.evidence)}</div>
+      ${extras(it,i)}
+      <textarea placeholder="your note">${esc(note)}</textarea></div>
+    </div>
+    <span class="chip">${esc(it.area||'')}</span>
+    ${!c.tick?'<span class="box none"></span>'
+      :`<span class="box ${st==='ok'?'ok':''} ${st==='no'?'no':''}">${st==='ok'?'&check;':st==='no'?'&times;':''}</span>`}
+  </div>`;
+}
+
+function render(){
+  document.getElementById('stats').innerHTML=CATS.map(c=>
+    `<div class="stat ${filt===c.id?'on':''}" data-f="${esc(c.id)}"><span class="dot" style="background:${esc(c.color)}"></span>${esc(c.label)}<b>${ITEMS.filter(it=>it.category===c.id).length}</b></div>`
+  ).join('')+`<div class="stat ${filt===null?'on':''}" data-f="">All<b>${ITEMS.length}</b></div>`;
+  document.querySelectorAll('.stat').forEach(e=>e.onclick=()=>{filt=e.dataset.f||null;S.filter=filt;save();render();});
+
+  let html='';
+  CATS.filter(c=>!filt||filt===c.id).forEach(c=>{
+    const items=ITEMS.map((it,i)=>[it,i]).filter(x=>x[0].category===c.id);
+    if(!items.length)return;
+    html+=`<div class="grp"><div class="grp-h"><span class="sd" style="width:7px;height:7px;border-radius:50%;background:${esc(c.color)}"></span><span class="t">${esc(c.label)}</span><span class="c">${items.length}</span><span class="sub">${esc(c.sub||'')}</span><span class="bar"></span></div>`;
+    if(byArea(c)){
+      const areas=[];items.forEach(x=>{if(areas.indexOf(x[0].area)<0)areas.push(x[0].area);});
+      areas.forEach(a=>{
+        const sub=items.filter(x=>x[0].area===a);
+        html+=`<div class="grp-h" style="top:31px;border-bottom:none;padding-top:13px"><span class="t area">${esc(a||'')}</span><span class="c">${sub.length}</span></div>`;
+        sub.forEach(x=>html+=row(x[0],x[1]));
+      });
+    } else items.forEach(x=>html+=row(x[0],x[1]));
+    html+='</div>';
+  });
+  document.getElementById('body').innerHTML=html;
+
+  document.querySelectorAll('.sh').forEach(el=>{
+    el.onclick=ev=>{ev.stopPropagation();openLb(ITEMS[+el.dataset.i].shots||[],+el.dataset.n);};
+  });
+  document.querySelectorAll('.lk').forEach(el=>{el.onclick=ev=>ev.stopPropagation();});
+
+  document.querySelectorAll('.row').forEach(el=>{
+    const k=kOf(ITEMS[+el.dataset.i]);
+    el.onclick=ev=>{if(ev.target.closest('.box')||ev.target.closest('.sh')||ev.target.closest('.lk')
+      ||ev.target.tagName==='TEXTAREA')return;el.classList.toggle('open2');};
+    const bx=el.querySelector('.box:not(.none)');
+    if(bx)bx.onclick=ev=>{ev.stopPropagation();
+      S.state[k]=S.state[k]==='ok'?'no':S.state[k]==='no'?'':'ok';
+      if(!S.state[k])delete S.state[k];save();render();};
+    el.querySelector('textarea').oninput=e=>{S.note[k]=e.target.value;if(!e.target.value)delete S.note[k];save();};
+  });
+  const tickable=ITEMS.filter(it=>META[it.category].tick);
+  const done=tickable.filter(it=>S.state[kOf(it)]).length;
+  document.getElementById('count').textContent=done+' / '+tickable.length+' reviewed';
+  document.getElementById('fill').style.width=(tickable.length?done/tickable.length*100:0)+'%';
+}
+
+/* Copy report order: first full category in full, then every crossed row from any
+   other category, then the count categories, then the remaining full categories,
+   then the titles-only categories. */
+function report(){
+  /* Strip only the inline tags the page renders, so a literal <tenant> or
+     <script> in a finding reaches the report intact, exactly as on screen. */
+  const strip=h=>String(h==null?'':h)
+    .replace(/<br\s*\/?>/gi,' ').replace(/<\/?(b|i|em|code)>/gi,'')
+    .replace(/[ \t]{2,}/g,' ').trim();
+  const line=it=>{const k=kOf(it),st=S.state[k],n=S.note[k];
+    return `  ${st==='ok'?'[x]':st==='no'?'[!]':'[ ]'} ${it.area||'-'}: ${strip(it.title)}\n      ${strip(it.evidence)}\n${n?'      you: '+n+'\n':''}`;};
+  const of=c=>ITEMS.filter(it=>it.category===c.id);
+  const full=CATS.filter(c=>mode(c)==='full'),counts=CATS.filter(c=>mode(c)==='count');
+  let out=(DATA.title||'Review')+'\n'+(DATA.subtitle?strip(DATA.subtitle)+'\n':'')+'\n';
+  const first=full[0];
+  if(first)out+=first.label.toUpperCase()+'\n'+of(first).map(line).join('')+'\n';
+  const crossed=ITEMS.filter(it=>S.state[kOf(it)]==='no'&&(!first||it.category!==first.id));
+  if(crossed.length)out+='FAILED ON REVIEW\n'+crossed.map(line).join('')+'\n';
+  counts.forEach(c=>{const v=of(c),d=v.filter(it=>S.state[kOf(it)]==='ok').length;
+    out+=`${c.label.toUpperCase()}: ${d} of ${v.length} ticked, list on the page\n\n`;});
+  full.slice(1).forEach(c=>{out+=c.label.toUpperCase()+'\n'+of(c).map(line).join('')+'\n';});
+  CATS.filter(c=>mode(c)==='titles').forEach(c=>{
+    out+=c.label.toUpperCase()+'\n'+of(c).map(it=>'  - '+strip(it.title)+'\n').join('')+'\n';});
+  return out;
+}
+
+document.getElementById('copy').onclick=()=>{
+  const out=report(),b=document.getElementById('copy');
+  const ok=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy report',1300);};
+  /* file:// is not always a clipboard-permitted origin, so fall back to a textarea. */
+  const fallback=()=>{const t=document.createElement('textarea');t.value=out;
+    document.body.appendChild(t);t.select();
+    try{document.execCommand('copy');ok();}catch(e){b.textContent='Copy failed';}
+    document.body.removeChild(t);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(out).then(ok,fallback);
+  } else fallback();
+};
+document.getElementById('reset').onclick=()=>{
+  if(!confirm('Clear your checks and notes?'))return;
+  localStorage.removeItem(KEY);S={state:{},note:{}};filt=null;render();
+};
+render();
+</script>

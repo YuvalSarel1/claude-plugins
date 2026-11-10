@@ -1,0 +1,12 @@
+{
+  "name": "qa-evidence",
+  "version": "0.1.0",
+  "description": "Evidence-first exploratory QA over Chrome DevTools Protocol: state-matrix sweeps, annotated screenshots that refuse to mislead, a review page, and the rules that keep findings honest",
+  "author": {
+    "name": "Yuval Sarel",
+    "url": "https://github.com/YuvalSarel1"
+  },
+  "repository": "https://github.com/YuvalSarel1/claude-plugins",
+  "homepage": "https://github.com/YuvalSarel1/claude-plugins/tree/main/plugins/qa-evidence",
+  "license": "MIT OR Apache-2.0"
+}

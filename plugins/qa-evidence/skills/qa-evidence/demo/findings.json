@@ -1,0 +1,33 @@
+{
+  "title": "Demo app: plan gating review",
+  "subtitle": "<b>demo/app.html</b>, plans <b>free</b> and <b>pro</b>, numbers from <code>demo/out/sweep.json</code>",
+  "storageKey": "qa-evidence-demo-v1",
+  "items": [
+    {
+      "category": "verified",
+      "area": "Projects",
+      "title": "Export is offered on pro and replaced by an upgrade prompt on free",
+      "evidence": "<b>The gate moves with the plan.</b> <code>projects@pro</code> has <code>exportButton: true</code>, <code>projects@free</code> has <code>false</code> and an Upgrade to export button. Both cells settled with 5 rendered rows.",
+      "shots": [{ "file": "table-pro.png", "caption": "Pro: Export CSV boxed red, the five projects boxed blue." }]
+    },
+    {
+      "category": "verified",
+      "area": "Projects",
+      "title": "The risk tooltip explains the column on a real hover",
+      "evidence": "<b>It opens only under a real mouse.</b> The job hovers the info icon and boxes the open tooltip; a synthetic hover leaves it closed.",
+      "shots": [{ "file": "tooltip.png", "caption": "Free: the open Risk tooltip." }]
+    },
+    {
+      "category": "context",
+      "area": "Projects",
+      "title": "No projects found is in the page text but never shown",
+      "evidence": "<b>Not a bug, and not an empty state.</b> The text sits at opacity 0 next to five loaded rows (<code>emptyTextPresent: true</code>, <code>emptyTextVisible: false</code>). Any check that reads page text or the accessibility tree will report an empty list here."
+    },
+    {
+      "category": "unproven",
+      "area": "Projects",
+      "title": "A project from another account renders an error page instead of a not-found",
+      "evidence": "<b>No verdict, the shot never had evidence.</b> <code>wrong-id.png</code> is a MISS: the identity check wanted Projects and the page said Something went wrong. Needs a real cross-account id to settle."
+    }
+  ]
+}

@@ -12,6 +12,12 @@
       "description": "Your claude agents list in a side pane, with optional cones columns",
       "source": "./plugins/fleet",
       "category": "productivity"
+    },
+    {
+      "name": "qa-evidence",
+      "description": "Evidence-first exploratory QA over Chrome DevTools Protocol: state-matrix sweeps, annotated screenshots that refuse to mislead, a review page",
+      "source": "./plugins/qa-evidence",
+      "category": "development"
     }
   ]
 }
