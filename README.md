@@ -10,6 +10,7 @@ Claude Code plugins by Yuval Sarel. Add the marketplace once, then install what 
 |---|---|
 | [fleet](plugins/fleet) | Your `claude agents` list in a side pane, with optional model, context, cost, CPU and memory columns |
 | [images](plugins/images) | Every image in the conversation in a strip above the prompt: the ones you paste and the ones Claude reads |
+| [qa-evidence](plugins/qa-evidence) | Evidence-first QA of a signed-in web app over CDP: state-matrix sweeps, annotated screenshots that refuse to mislead, a review page |
 
 ![Claude Code with the fleet pane beside the conversation](plugins/fleet/assets/fleet.svg)
 
