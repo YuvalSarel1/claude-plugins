@@ -1,0 +1,12 @@
+{
+  "name": "infographic",
+  "version": "0.1.0",
+  "description": "Make an infographic that tells a story at a glance: a few steps, one drawing each, one example threaded through, few words",
+  "author": {
+    "name": "Yuval Sarel",
+    "url": "https://github.com/YuvalSarel1"
+  },
+  "repository": "https://github.com/YuvalSarel1/claude-plugins",
+  "homepage": "https://github.com/YuvalSarel1/claude-plugins/tree/main/plugins/infographic",
+  "license": "MIT OR Apache-2.0"
+}

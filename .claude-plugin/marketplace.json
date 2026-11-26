@@ -24,6 +24,12 @@
       "description": "Evidence-first exploratory QA over Chrome DevTools Protocol: state-matrix sweeps, annotated screenshots that refuse to mislead, a review page",
       "source": "./plugins/qa-evidence",
       "category": "development"
+    },
+    {
+      "name": "infographic",
+      "description": "Make an infographic that tells a story at a glance: a few steps, one drawing each, one example threaded through, few words",
+      "source": "./plugins/infographic",
+      "category": "productivity"
     }
   ]
 }
