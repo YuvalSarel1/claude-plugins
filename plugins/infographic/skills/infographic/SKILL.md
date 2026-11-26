@@ -62,7 +62,10 @@ rather than data, say so when you hand the page over.
   scale (exact → interpreted → advice) instead of adding a trust legend.
 - Things that are never given go on a dashed rung above the top, struck through with a thin line (1.5px, partly
   transparent) so the text stays readable. Off-by-default levels get a dashed outline.
-- Arrows mean "needs" or "flows to"; label only the ones whose meaning isn't obvious.
+- Arrows mean "needs" or "flows to"; label only the ones whose meaning isn't obvious. Put each label right
+  beside its own mark (a few px from the arrow it names, clear of any line), never floating between two marks.
+- When one actor hands another a thing, draw what is inside it, with each line tagged by where it came from
+  (a level badge, or "new" for what the actor worked out itself).
 
 ## 6. Build
 
