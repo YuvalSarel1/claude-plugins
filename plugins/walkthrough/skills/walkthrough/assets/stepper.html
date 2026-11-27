@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Walkthrough template</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Kalam:wght@400;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f7f8fa;color:#1d2430;font:17px/1.6 -apple-system,system-ui,sans-serif}
+main{max-width:1180px;margin:0 auto;padding:36px 40px 120px}
+h1{font:700 54px/1.1 Caveat,cursive;margin:0 0 6px}
+.lead{font-size:19px;color:#3a4352;margin:0 0 26px;max-width:900px}
+section{background:#fff;border:1px solid #e3e6eb;border-radius:14px;padding:28px 36px;margin-bottom:28px}
+.kicker{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#2f5bd3;font-weight:600}
+h2{margin:4px 0 14px;font-size:27px}
+.paper{background:#FBF9F3;border:1px solid #e8e2d3;border-radius:12px;padding:14px 14px 18px}
+.btns{display:flex;gap:8px;margin:0 0 6px 6px;align-items:center}
+.btns button{font:600 15px system-ui;padding:8px 14px;border-radius:8px;border:1px solid #cdd3dc;background:#fff;cursor:pointer}
+.btns button.on{background:#2f5bd3;border-color:#2f5bd3;color:#fff}
+.btns button:disabled{opacity:.4;cursor:default}
+.cap{font:400 22px/1.45 Kalam,cursive;padding:4px 10px 6px;min-height:110px}
+.dots{display:inline-flex;gap:6px;margin-left:10px}
+svg.step{display:block;width:100%;font-family:Kalam,cursive}
+</style></head><body><main>
+
+<div class="kicker">Walkthrough</div>
+<h1>Attention, one step at a time</h1>
+<p class="lead">One chapter: how a token decides what to read from the tokens before it.</p>
+
+<!-- One chapter = one section with these four ids: X-b, X-n, X-dots, X-cap, and the svg id X. -->
+<section><div class="kicker">Chapter 1</div><h2>From scores to what a token receives</h2>
+<div class="paper">
+ <div class="btns"><button id="att-b">← Back</button><button id="att-n" class="on">Next →</button><span id="att-dots" class="dots"></span></div>
+ <div id="att-cap" class="cap"></div>
+ <svg id="att" class="step" viewBox="0 0 1060 520"></svg>
+</div></section>
+
+<section><div class="kicker">Sources</div><ul><li><a href="https://arxiv.org/abs/1706.03762">Vaswani et al. 2017, Attention Is All You Need</a></li></ul></section>
+</main>
+<script>
+// ---- engine: one persistent diagram per chapter, each step = {cap, draw() -> svg markup} ----
+function stepper(id, steps, after) {
+  const S = document.getElementById(id), C = document.getElementById(id + "-cap"), D = document.getElementById(id + "-dots");
+  const Bk = document.getElementById(id + "-b"), Nx = document.getElementById(id + "-n");
+  let st = 0;
+  const defs = '<defs><marker id="' + id + 'a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0L10,5L0,10z" fill="#2A2A2A"/></marker></defs>';
+  function draw() {
+    S.innerHTML = defs + steps[st].draw();
+    C.innerHTML = steps[st].cap;
+    D.innerHTML = steps.map((_, i) => '<span data-s="' + i + '" style="width:14px;height:14px;border-radius:50%;cursor:pointer;background:' + (i == st ? '#2f5bd3' : '#cdd3dc') + '"></span>').join("");
+    D.querySelectorAll("span").forEach(d => d.onclick = () => { st = +d.dataset.s; draw() });
+    Bk.disabled = st == 0; Nx.disabled = st == steps.length - 1;
+    if (after) after(S, st, draw);   // wire clicks inside the svg here
+  }
+  Bk.onclick = () => { if (st > 0) { st--; draw() } };
+  Nx.onclick = () => { if (st < steps.length - 1) { st++; draw() } };
+  draw();
+}
+// ---- helpers: one colour per role, kept across every chapter ----
+const COL = { reader: "#2B5FA8", key: "#B03D36", value: "#2D7546", out: "#6B4FA0", ink: "#2A2A2A", mute: "#6b665c" };
+const txt = (x, y, t, fs, col, extra) => '<text x="' + x + '" y="' + y + '" font-size="' + (fs || 22) + '" fill="' + (col || COL.ink) + '"' + (extra || '') + '>' + t + '</text>';
+const pill = (x, y, w, h, col, label, fs) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="9" fill="#fff" stroke="' + col + '" stroke-width="2.5"/>' + txt(x + w / 2, y + h / 2 + (fs || 22) * .35, label, fs || 22, col, ' text-anchor="middle" font-weight="700"');
+const softmax = r => { const e = r.map(Math.exp), s = e.reduce((a, b) => a + b); return e.map(x => x / s) };
+
+// ---- chapter: numbers are generated from their inputs, so every caption and cell agree ----
+(() => {
+  const toks = ["rm", "-rf", "/data", "deletes"], scores = [0.5, 0.0, 2.0, 0.6], w = softmax(scores);
+  const x = j => 250 + j * 170, f2 = v => v.toFixed(2);
+  const row = (k) => toks.map((t, j) => pill(x(j), 40, 140, 46, COL.key, t)).join("") + pill(40, 160, 160, 46, COL.reader, "deletes") +
+    toks.map((t, j) => k == 0 ? '' : k == 1 ? pill(x(j) + 30, 160, 80, 46, COL.ink, scores[j].toFixed(1)) :
+      '<circle cx="' + (x(j) + 70) + '" cy="183" r="' + (18 + 22 * w[j]) + '" fill="' + COL.out + '" fill-opacity="' + (.2 + .8 * w[j]) + '"/>' + txt(x(j) + 70, 190, f2(w[j]), 20, w[j] > .4 ? "#fff" : COL.ink, ' text-anchor="middle" font-weight="700"')).join("");
+  stepper("att", [
+    { cap: "<b>1. The reader and the tokens it can read.</b> \"deletes\" is the reader (its query). The tokens before it, and itself, are what it can read (their keys).", draw: () => row(0) },
+    { cap: "<b>2. Match: query · key.</b> One dot product per pair gives a score. A high score means a strong match.", draw: () => row(1) },
+    { cap: "<b>3. Softmax turns scores into weights.</b> e to each score, divided by their sum, so the row adds up to 1. /data gets most of the weight.", draw: () => row(2) + txt(40, 300, "e^score: " + scores.map(s => f2(Math.exp(s))).join(", "), 22, COL.mute) },
+    { cap: "<b>4. Mix the values.</b> The reader receives the weights times each token's value, summed. The values never entered the scores: they only decide what is received.", draw: () => row(2) + txt(40, 330, "out(deletes) = " + w.map((v, j) => f2(v) + " × v(" + toks[j] + ")").join(" + "), 22, COL.value, ' font-weight="700"') },
+  ]);
+})();
+</script></body></html>

@@ -30,6 +30,12 @@
       "description": "Make an infographic that tells a story at a glance: a few steps, one drawing each, one example threaded through, few words",
       "source": "./plugins/infographic",
       "category": "productivity"
+    },
+    {
+      "name": "walkthrough",
+      "description": "Explain how a mechanism works with a step-through visual page: one diagram per chapter that changes with each step, captions carrying the reasoning, numbers that really compute",
+      "source": "./plugins/walkthrough",
+      "category": "productivity"
     }
   ]
 }

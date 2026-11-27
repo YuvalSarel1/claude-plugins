@@ -1,0 +1,12 @@
+{
+  "name": "walkthrough",
+  "version": "0.1.0",
+  "description": "Explain how a mechanism works with a step-through visual page: one diagram per chapter that changes with each step, captions carrying the reasoning, numbers that really compute",
+  "author": {
+    "name": "Yuval Sarel",
+    "url": "https://github.com/YuvalSarel1"
+  },
+  "repository": "https://github.com/YuvalSarel1/claude-plugins",
+  "homepage": "https://github.com/YuvalSarel1/claude-plugins/tree/main/plugins/walkthrough",
+  "license": "MIT OR Apache-2.0"
+}
