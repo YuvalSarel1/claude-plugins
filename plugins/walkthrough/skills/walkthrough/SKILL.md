@@ -20,7 +20,9 @@ answers "how does this actually work", and it is done when the reader could comp
 ## 1. Start from the reader's question
 
 Write down the question in the reader's words ("why does a value mean what I hand over?") and what they already
-know. Start one step past what they know; do not reteach it. Each follow-up question they ask becomes new steps or a
+know. Start one step past what they know, and check that against their questions, not their title or fluency: someone
+fluent with evals may still ask what a dot product is. A basic question ("how does a mask block attention,
+mathematically") gets its own chapter, never a "recall that". Each follow-up question they ask becomes new steps or a
 new chapter, never a paragraph appended below.
 
 ## 2. One chapter, one diagram, one change per step
@@ -51,6 +53,10 @@ title, a one-sentence lead naming the chapters, the chapters, sources.
   what the source does not document.
 - When the reader asks "how do these numbers work out", answer with a chapter that builds the number from its
   factors, one factor per step (128, then × 8 heads, then × 2, then × 28 layers, then × 2 bytes).
+- When two real numbers look like they disagree (a 16x token saving but a 2.1x speedup, 112 kB in one place and
+  115 kB in another), add a step that shows why both hold: what the smaller one also pays for, or which unit or
+  rounding differs. If you cannot reconcile them, say so in the step and name what would settle it. Check every
+  pair of related numbers on the page for this before the reader does.
 
 ## 5. Interaction only where it answers a question
 
@@ -69,7 +75,20 @@ scale, arrows only where they carry meaning. In addition:
 - Hand-drawn look (Caveat for titles, Kalam for labels) on a paper background, light theme, unless the host
   product has its own design system.
 
-## 7. Build and check
+## 7. A series of pages
+
+When the topic needs more than one page (a course, "sequential modules"), each module is one walkthrough page, and:
+
+- An index page lists the modules in order, one line each on the question it answers, and each page links back
+  and forward.
+- Each module states, in its lead, which earlier modules it builds on, and reuses their example and their colours
+  rather than starting new ones. A term defined in module 2 is not redefined in module 5, it links back.
+- Facts about real systems come from sources read for this page, cited in its sources section, with a date for
+  anything that changes fast (current models, hardware, prices). Do not write them from memory.
+- Check the series as a whole before showing it: every link works, colours and the example match across pages,
+  and no page assumes something a later page introduces.
+
+## 8. Build and check
 
 - Use `assets/stepper.html`: a working page with the stepper engine (`stepper(id, steps)`, each step a `cap` and a
   `draw()` returning SVG markup) and drawing helpers. Copy it and replace the chapters.
@@ -80,7 +99,7 @@ scale, arrows only where they carry meaning. In addition:
   text running off the right edge, and empty frames before showing the page.
 - Open the page for the reader when it is ready, and say which numbers are illustrative.
 
-## 8. Iterate on questions
+## 9. Iterate on questions
 
 Treat every follow-up question as a missing step. Add the steps where the question arose, rerun the step
 screenshots, and reply with what changed and where.
