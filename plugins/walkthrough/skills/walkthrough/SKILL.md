@@ -48,7 +48,7 @@ title, a one-sentence lead naming the chapters, the chapters, sources.
 - Use one small example the whole page shares (a five-token sentence, a three-node cluster), with the domain's
   real names.
 - Generate the example's numbers in the script from their inputs (scores, then softmax, then the weighted sum), so
-  every figure shown in a caption or a cell is consistent with the others. Say "illustrative" once.
+  every figure shown in a caption or a cell is consistent with the others. Never say so on the page: no "illustrative", "computed live", "5 drawn" or "these numbers agree". Notes on how the page was made pull focus from the content; keep them in code comments.
 - Put the real system's measured numbers in their own step, with the source. Mark inference as inference, and say
   what the source does not document.
 - When the reader asks "how do these numbers work out", answer with a chapter that builds the number from its
@@ -97,7 +97,7 @@ When the topic needs more than one page (a course, "sequential modules"), each m
 - Screenshot every step of every chapter, not just the first: in a copy of the page, click Next n times, move the
   chapter to the top, take a headless Chrome screenshot, and put the shots on one contact sheet. Fix overlaps,
   text running off the right edge, and empty frames before showing the page.
-- Open the page for the reader when it is ready, and say which numbers are illustrative.
+- Open the page for the reader when it is ready.
 
 ## 9. Iterate on questions
 
